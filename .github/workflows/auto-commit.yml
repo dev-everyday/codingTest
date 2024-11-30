@@ -1,8 +1,9 @@
 name: Daily Auto Commit
 
 on:
+  workflow_dispatch:
   schedule:
-    - cron: '30 14 * * *'  # 매일 14:30 UTC에 실행 (UTC+9 한국 시간 23:30)
+    - cron: '30 14 * * *'  # 매일 14:30 UTC에 실행 (한국 시간 23:30)
 
 jobs:
   auto-commit:
@@ -12,27 +13,37 @@ jobs:
         uses: actions/checkout@v3
 
       - name: 오늘 커밋 여부 확인
+        id: check_commit
         run: |
-          if git log --since='yesterday 14:30 UTC' --author="$GITHUB_ACTOR" --oneline | grep .; then
+          DATE=$(TZ=Asia/Seoul date '+%Y-%m-%d')
+          echo "오늘 날짜: $DATE"
+          if git log --since="$DATE 00:00 +0900" --author="$GITHUB_ACTOR" --oneline | grep .; then
             echo "오늘 이미 커밋이 있습니다. 워크플로를 종료합니다."
-            exit 0
+            echo "::set-output name=should_run::false"
           else
             echo "오늘 커밋이 없습니다. 자동 커밋을 진행합니다."
+            echo "::set-output name=should_run::true"
           fi
 
       - name: 파일 업데이트
+        if: steps.check_commit.outputs.should_run == 'true'
         run: |
-          DATE=$(TZ=Asia/Seoul date '+%Y-%m-%d')
-          echo "오늘은 auto-commit bot이 잔디 심어요" > ${DATE}.txt
+          DATE=$(TZ=Asia/Seoul date '+%Y%m%d')
+          echo "DATE=${DATE}" >> $GITHUB_ENV  # DATE 변수를 환경 변수로 설정
+          echo "🌿오늘은 bot이 잔디 심어요🌿" > "[${DATE}]"
 
       - name: 변경 사항 커밋
+        if: steps.check_commit.outputs.should_run == 'true'
         run: |
+          echo "사용 중인 DATE 변수: ${DATE}"
           git config --global user.name "$GITHUB_ACTOR"
           git config --global user.email "${{ secrets.USER_EMAIL }}"
-          git add ${DATE}.txt
+          ls -l  # 현재 디렉토리의 파일 목록 확인
+          git add "[${DATE}]"
           git commit -m "자동 커밋: ${DATE}"
 
       - name: 변경 사항 푸시
+        if: steps.check_commit.outputs.should_run == 'true'
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
