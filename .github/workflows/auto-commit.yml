@@ -3,7 +3,7 @@ name: Daily Auto Commit
 on:
   workflow_dispatch:
   schedule:
-    - cron: '30 14 * * *'  # 매일 14:30 UTC에 실행 (한국 시간 23:30)
+    - cron: '*/1 * * * *'  # 매 1분마다 실행
 
 jobs:
   auto-commit:
