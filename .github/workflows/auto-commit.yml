@@ -19,10 +19,10 @@ jobs:
           echo "오늘 날짜: $DATE"
           if git log --since="$DATE 00:00 +0900" --author="$GITHUB_ACTOR" --oneline | grep .; then
             echo "오늘 이미 커밋이 있습니다. 워크플로를 종료합니다."
-            echo "::set-output name=should_run::false"
+            echo "should_run=false" >> $GITHUB_OUTPUT
           else
             echo "오늘 커밋이 없습니다. 자동 커밋을 진행합니다."
-            echo "::set-output name=should_run::true"
+            echo "should_run=true" >> $GITHUB_OUTPUT
           fi
 
       - name: 파일 업데이트
@@ -44,6 +44,9 @@ jobs:
 
       - name: 변경 사항 푸시
         if: steps.check_commit.outputs.should_run == 'true'
-        uses: ad-m/github-push-action@master
+        uses: actions/checkout@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: false
+        run: |
+          git push
